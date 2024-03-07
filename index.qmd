@@ -169,7 +169,6 @@ Step # | Verb | Arguments
 Write code in R or python to execute the steps you outlined above.
 
 ```{r}
-
 state <- filter(tidyTuesday, state == "GA")
 
 state$jurisdiction <- toupper(state$jurisdiction)
@@ -193,9 +192,6 @@ for (i in numYears) {
 }
 
 final
-        
-#, color = Jurisdiction
-
 ```
 
 ## Chart Description
@@ -222,7 +218,7 @@ Make sure your axes are labeled (5 pts) and your chart has a title (5 pts).
 Include your plot in this document and make sure you have a figure caption that describes what someone should notice in the chart (5 pts)
 You may do this either by modifying the chunk options or by using `include=F` and manually including the picture with a caption.
 
-```{r}
+```{r, include=TRUE}
 long <- gather(final, key = "Date", value = "Polling_Numbers", -Jurisdiction)
 
 plot <- ggplot(long, aes(x = Date, y = Polling_Numbers, group = Jurisdiction)) +
@@ -240,7 +236,21 @@ plot + theme(plot.margin = margin(r = 1, unit = "mm"))
 
 Evaluate the chart you created for comprehensibility and accessibility. (1 pt)
 
+In terms of comprehensibility, I think it's a bit hard to read the graph as all the lines are in black. 
+Furthermore, there isn't a legends section to indicate which jurisdiction belongs to which line.
+
+In terms of accessability, it's not really accessible as I wrote the code into 2 separate chunks of r code.
+Moreover, I hard-coded the state name so it may not be convenient to run this code for other states.
+
+
 What modifications might you add to this chart to make it clearer and more understandable? (2 pts)
+
+To improve comprehensibility, I would add a legends section next to the graph and assign a color for each
+jurisdiction, color-coding all the lines with their respective colors.
+
+To improve accessability, I would combine both chunks or R code into one and compress them all within a function.
+Then, the input of the function would be the state name. That way, it would be easier to parse the states within
+the functions and call them to obtain the results. 
 
 
 
@@ -268,6 +278,34 @@ COMMUNITY CENTER, 1168 HWY 84, SILAS, AL 36919
 
 Write out the steps your function will need to accomplish in plain language.
 
+1) Break down the address into different parts by splitting them from commas and store as (address)
+
+2) Make 3 scenarios where there could be 1, 2 or 3 commas
+
+3) For every address, there will be at least a city, state and postcode. So iterate through (address)
+   i  ) For address[-1], it should be the address and zipcode so split them from " " and we can get both of those
+   ii ) For address[-2], that should be the city
+   
+4) If there is only one comma, that means it only contains a city, state and zipcode. Therefore, we would...
+   i. ) Apply step 3 to get city, state and postcode
+   ii ) Add none in front of (address) until address length is 4
+   iii) The first two NA values of (address) will be the builidngNum and street
+   
+5) If there are two commas, that means there will also be at least a street and potentially builingNum. Therefore..
+   i  ) Apply step 3 to get city, state and postcode
+   ii ) For address[0], split it from " " and see if the first term is an integer
+        a) If it is, that is the builidngNum
+        b) If it isn't, builidngNum = None
+   iii) Combine the splitted words back to create street
+
+6) If there are three commas, all elements will be there so
+   i  ) Apply step 3 to get city, state and postcode
+   ii ) For address[-3], that should be the street
+   111) For address[-4], that should be the buildingNum
+   
+7) Return the 5 elements of the address
+
+
 
 ## Function Code - Single Address
 (5 pts)
@@ -277,60 +315,80 @@ Write a function, `address_parser`, which can handle a single address and return
 (change this chunk to python if you'd prefer to use python over R for this task)
 ```{python single-address-parser}
 def address_parser(address):
-
+  
+  #splitting the address by commas
   address_list = address.split(",")
 
+  #my method is to break the address down according to how many commas there are
   
+  #if there is only one comma
   if len(address_list) == 2:
     
+    #use while loop to add NA values at the beginning of the list
     while len(address_list) < 4:
       address_list.insert(0, None)
     
+    #code to get state and zipcode
     last = address_list[-1]
     stateZip = last.split(" ")
     stateZip = stateZip[1:]
-
     state = stateZip[0]
-    zipCode = stateZip[1]
-  
+    if len(stateZip) == 2:
+      zipCode = stateZip[1]
+    else:
+      zipCode = None
+    
+    #code to get builidngNum, street and city
     city = address_list[-2]
     street = address_list[-3]
     buildingNum = address_list[-4]
   
   
+  #if there are 2 commas
   elif len(address_list) == 3:
+    #code to get state and zipcode
     last = address_list[-1]
     stateZip = last.split(" ")
     stateZip = stateZip[1:]
-    
     state = stateZip[0]
-    zipCode = stateZip[1]
+    if len(stateZip) == 2:
+      zipCode = stateZip[1]
+    else:
+      zipCode = None
+    
+    #code to get city
     city = address_list[-2]
     
+    #code to get buildingnum and street
     first = address_list[-3]
     buildingStreet = first.split(" ")
-    
     try:
       buildingStreet[0] = int(buildingStreet[0])
       buildingNum = str(buildingStreet[0])
       buildingStreet = buildingStreet[1:]
     except ValueError:
       buildingNum = None
-      
     street = " ".join(buildingStreet)
     
 
+  #if there are 3 commas
   else:
+    #code to get state and zipcode
     last = address_list[-1]
     stateZip = last.split(" ")
     stateZip = stateZip[1:]
-    
     state = stateZip[0]
-    zipCode = stateZip[1]
+    if len(stateZip) == 2:
+      zipCode = stateZip[1]
+    else:
+      zipCode = None
+      
+    #code to get buildingnum, street, city
     city = address_list[-2]
     street = address_list[-3]
     buildingNum = address_list[-4]
 
+  #return the 5 elements of an address
   return buildingNum, street, city, state, zipCode
 ```
 
@@ -361,22 +419,19 @@ def address_vec(vector):
   df = pd.DataFrame(columns = columns)
   print(df)
   for eachAddress in vector:
+    # print("loop)
     buildingNum, street, city, state, zipCode = address_parser(eachAddress)
     newRow = {"Building Number": buildingNum, "Street": street, "City": city, "State": state, "Zip Code": zipCode}
     df.loc[len(df)] = newRow
   return df
-
 ```
 
 
 This chunk will test your function on the addresses provided as examples. Delete whichever chunk corresponds to the language you didn't use. 
-```{r r-vector-address-parser-test, error = T}
-test_vec <- c("Tatitlek, AK 99677", "First Street, Cordova, AK 99574", "105 ICE ST, MENASHA, WI 54952-3223", "1025 W 5TH AVE, OSHKOSH, WI 54902", "1702 COUNTY ROAD 40 W, PRATTVILLE, AL 36067", "5281 HIGHWAY 29, CORINTH VFD (PEROTE STATION), BANKS, AL 36005", "713 W. MOUNTAIN AVENUE, JACKSONVILLE, AL 36265", "COMMUNITY CENTER, 1168 HWY 84, SILAS, AL 36919")
-address_vec(test_vec)
-```
 
 ```{python py-vector-address-parser-test, error = T}
 test_vec = ["Tatitlek, AK 99677", "First Street, Cordova, AK 99574", "105 ICE ST, MENASHA, WI 54952-3223", "1025 W 5TH AVE, OSHKOSH, WI 54902", "1702 COUNTY ROAD 40 W, PRATTVILLE, AL 36067", "5281 HIGHWAY 29, CORINTH VFD (PEROTE STATION), BANKS, AL 36005", "713 W. MOUNTAIN AVENUE, JACKSONVILLE, AL 36265", "COMMUNITY CENTER, 1168 HWY 84, SILAS, AL 36919"]
+
 address_vec(test_vec)
 ```
 
@@ -385,8 +440,37 @@ address_vec(test_vec)
 Use your function to parse a vector of the unique polling place addresses in your state, creating a data table of address components for your letters.
 (5 pts)
 
-```{r r-function-eval}
+```{r}
+#filtering for a vector of the unique polling place addresses in Georgia
+state <- filter(tidyTuesday, state == "GA")
+state$jurisdiction <- toupper(state$jurisdiction)
+jurisdictions <- ((unique(state$jurisdiction)))
 
+addresses <- state %>%
+  group_by(jurisdiction) %>%
+  summarise(address = address)
+
+vector = c(addresses$address)
+```
+
+```{python r-function-eval}
+#reticulating r dataset to 
+vector = r.vector
+
+#run the function
+address_vec(vector)
 ```
 
 Where did your function have issues, if it did? (5 pts)
+
+Firstly, my function was coded in Python so I had to clean the data using R and reticulate it to Python. 
+
+Secondly, my function was able to break down all the example addresses but when it came to all the unique
+polling place addresses in Georgia, I realised that some of these addresses did not have a zipcode. At first,
+I assumed that it was an anomaly at index 51 so I deleted the row and ran the code again. However, the 
+error reccured again so I checked the next few indexes rows and realised they all did not have zipcodes.
+
+Hence, I had to adjust my address_parser() function by adding an if statement. If there wasn't a zipcode, zipcode =
+None. After that, everything worked well. 
+
+
